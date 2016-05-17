@@ -9,6 +9,8 @@ from datetime import datetime
 from subprocess import call
 from time import sleep
 
+LOG_PATH = 'downtime.utf8.csv'
+SLEEP = 15
 PING_HOSTS = [
     'vivatudo.com.br',
     'www.microsoft.com',
@@ -16,9 +18,17 @@ PING_HOSTS = [
 ]
 
 
+def subcommand(fn):
+    """Decorator that adds the decorated function to a list."""
+    if not hasattr(subcommand, 's'):  # Because functions are 1st class objects
+        subcommand.s = []          # we can store the list inside the function.
+    subcommand.s.append(fn)        # One global variable less.
+    return fn
+
+
 class Fiberless(object):
-    def __init__(self, sleep=30, ping_hosts=PING_HOSTS,
-                 log_path='downtime.utf8.csv'):
+    def __init__(self, sleep=SLEEP, ping_hosts=PING_HOSTS,
+                 log_path=LOG_PATH):
         self.sleep = sleep
         self.ping_hosts = ping_hosts
         self.log_path = log_path
@@ -45,7 +55,7 @@ class Fiberless(object):
                 str(now - self.bad_since),
                 str(self.bad_since),
                 str(now),
-            ]))
+            ]) + '\n')
 
     def monitor_forever(self):
         while True:
@@ -70,6 +80,22 @@ class Fiberless(object):
             self.write_downtime(datetime.now())
 
 
-if __name__ == '__main__':
-    f = Fiberless(sleep=15)
+@subcommand
+def forever(sleep: 'Time to sleep between checks'=SLEEP,
+            ping_hosts: 'List of hosts to ping'=PING_HOSTS,
+            log_path: 'Path to downtime CSV log file'=LOG_PATH):
+    """Monitors the network and writes downtime to a CSV log file."""
+    f = Fiberless(sleep=sleep, ping_hosts=ping_hosts, log_path=log_path)
     f.monitor_forever()
+
+
+def main():
+    from argh import ArghParser  # sudo apt-get install python3-argh
+    parser = ArghParser()
+    # Sorting makes the output of --help better:
+    parser.add_commands(sorted(subcommand.s, key=lambda f: f.__name__))
+    parser.dispatch()
+
+
+if __name__ == '__main__':
+    main()
