@@ -13,6 +13,8 @@ Pull requests with additional features are very welcome.
 Usage
 =====
 
+::
+
 	# Print short usage message. Includes subcommand names.
 	./fiberless.py
 
